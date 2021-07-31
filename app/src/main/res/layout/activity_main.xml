@@ -15,19 +15,20 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="48sp"
-        android:text="I Have To Fly!"
+        android:textStyle="bold"
+        android:text="I Have To Fly !"
+        android:fontFamily="casual"
         android:layout_above="@+id/play"
         android:layout_below="@+id/highscore"
         android:textColor="@color/white"
         android:layout_centerHorizontal="true"/>
-    <TextView
+    <ImageButton
         android:id="@+id/play"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="64sp"
-        android:text="Play"
-        android:textColor="@color/black"
-        android:layout_centerInParent="true"/>
+        android:background="@drawable/play"
+        android:layout_centerInParent="true"
+        />
     <TextView
         android:id="@+id/highscore"
         android:layout_width="wrap_content"
@@ -35,6 +36,7 @@
         android:textSize="24sp"
         android:text="High Score"
         android:textColor="@color/black"
+        android:fontFamily="casual"
         android:layout_margin="16dp"
         android:layout_alignParentRight="true"/>
     <ImageView
