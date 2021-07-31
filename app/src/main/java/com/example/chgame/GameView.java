@@ -1,9 +1,16 @@
 package com.example.chgame;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.SoundPool;
+import android.os.Build;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
 
@@ -12,15 +19,19 @@ import java.util.List;
 import java.util.Random;
 
 public class GameView extends SurfaceView implements Runnable{
-
+    double start ,seconds ;
     private Random random;
     private Thread thread;
     private boolean isPlaying, isGameOver = false;
-    private int screenX, screenY;
+    private int screenX, screenY, score=0;
     public static float screenRatioX, screenRatioY;
+    private SoundPool soundPool;
+    private SharedPreferences prefs;
     private Paint paint;
+    private int sound;
     //create an obj of Flight
     private  Flight flight;
+    private GameAcitivity activity;
     //creating a list of bullets
     private List<Bullet> bullets;
     //creating an array of birds
@@ -28,8 +39,22 @@ public class GameView extends SurfaceView implements Runnable{
     //create 2 obj (instance) of the background class bc it will help us to make the background move
     private background Background1, Background2;
 
-    public GameView(Context context, int screenX, int screenY) {
-        super(context);
+    public GameView(GameAcitivity activity, int screenX, int screenY) {
+        super(activity);
+        this.activity=activity;
+
+        prefs=activity.getSharedPreferences("game",Context.MODE_PRIVATE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            AudioAttributes audioAttributes=new AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .build();
+            soundPool= new SoundPool.Builder()
+                    .setAudioAttributes(audioAttributes)
+                    .build();
+        }else
+            soundPool=new SoundPool(1, AudioManager.STREAM_MUSIC, 0);
+         sound= soundPool.load(activity, R.raw.shoot, 1 );
 
         this.screenX=screenX;
         this.screenY=screenY;
@@ -42,6 +67,12 @@ public class GameView extends SurfaceView implements Runnable{
         flight = new Flight(this, screenY, getResources());
         //initialisation of the bullets list
         bullets = new ArrayList<>();
+
+        Background2.x=screenX;
+
+        paint = new Paint();
+        paint.setTextSize(128);
+        paint.setColor(Color.WHITE);
         //initialization of birds array
         birds = new Bird[4];
 
@@ -51,15 +82,13 @@ public class GameView extends SurfaceView implements Runnable{
             birds[i] = bird;
         }
 
-        Background2.x=screenX;
-
-        paint = new Paint();
         random = new Random();
     }
 
     @Override
     //methode of Runnable we generated it
     public void run() {
+        start = System.currentTimeMillis();
         //this loop is runing when the player is playing
         while (isPlaying){
             update ();
@@ -73,15 +102,17 @@ public class GameView extends SurfaceView implements Runnable{
 
     //every time this methode is called our background will move
     public void update (){
-     // here we'll change the position of our background on the X axes by 10pixels
+        seconds= (System.currentTimeMillis()-start)/1000;//counting how many seconds passed
+
+        // here we'll change the position of our background on the X axes by 10pixels
         Background1.x -=10 *screenRatioX;
         Background2.x -=10* screenRatioX;
 
         //maybe I have an error here "background"
-        if(Background1.x + Background1.Background.getWidth() <0 ){
+        if(Background1.x + Background1.getBgSunRise().getWidth() <0 ){
             Background1.x=screenX;
         }
-        if(Background2.x + Background2.Background.getWidth() <0 ){
+        if(Background2.x + Background2.getBgSunRise().getWidth() <0 ){
             Background2.x=screenX;
         }
 
@@ -111,6 +142,7 @@ public class GameView extends SurfaceView implements Runnable{
                 //checking if the bullets hit the bird
                 if (Rect.intersects(bird.getCollisionShape(), bullet.getCollisionShape())) {
                     //setting the position of the bird and the bullet to be off the screen
+                    score++;
                     bird.x = -500;
                     bullet.x = screenX + 500;
                     bird.wasShot = true;
@@ -158,19 +190,47 @@ public class GameView extends SurfaceView implements Runnable{
         //getholder somthing to put our background on
         if( getHolder().getSurface().isValid()){
             Canvas canvas =getHolder().lockCanvas();
-            canvas.drawBitmap(Background1.Background, Background1.x, Background1.y,paint);
-            canvas.drawBitmap(Background2.Background, Background2.x, Background2.y,paint);
+            //changing the background according To passed time
+
+            if(seconds <= 5){
+                canvas.drawBitmap(Background1.getBgSunRise(), Background1.x, Background1.y,paint);
+                canvas.drawBitmap(Background2.getBgSunRise(), Background2.x, Background2.y,paint);
+            }
+            if(seconds > 5 && seconds <= 10){
+                canvas.drawBitmap(Background1.getBgDay(), Background1.x, Background1.y,paint);
+                canvas.drawBitmap(Background2.getBgDay(), Background2.x, Background2.y,paint);
+            }
+            if(seconds > 10 && seconds <= 15){
+                canvas.drawBitmap(Background1.getBgCloud(), Background1.x, Background1.y,paint);
+                canvas.drawBitmap(Background2.getBgCloud(), Background2.x, Background2.y,paint);
+            }
+            if(seconds > 15 ){
+                canvas.drawBitmap(Background1.getBgNight(), Background1.x, Background1.y,paint);
+                canvas.drawBitmap(Background2.getBgNight(), Background2.x, Background2.y,paint);
+            }
+
+
+            //drawing all the birds
+            for (Bird bird : birds)
+                canvas.drawBitmap(bird.getBird(), bird.x, bird.y, paint);
+
+            canvas.drawText(score + "", screenX/ 2f, 164, paint);
+
             //checking if the game is over
             if (isGameOver) {
                 isPlaying = false;//breaking the thread
                 //drawing the dead plane
                 canvas.drawBitmap(flight.getDead(), flight.x, flight.y, paint);
                 getHolder().unlockCanvasAndPost(canvas);
+                //a methode we created to garde the high score
+                saveIfHighScore();
+
+                waitBeforeExiting();
+
+
                 return;
             }
-            //drawing all the birds
-            for (Bird bird : birds)
-                canvas.drawBitmap(bird.getBird(), bird.x, bird.y, paint);
+
 
             //drawing the plane after drawing the bg
             canvas.drawBitmap(flight.getFlight(), flight.x , flight.y , paint);
@@ -183,6 +243,24 @@ public class GameView extends SurfaceView implements Runnable{
             getHolder().unlockCanvasAndPost(canvas);
         }
 
+    }
+
+    private void waitBeforeExiting() {
+        try {
+            Thread.sleep(3000);
+            activity.startActivity(new Intent(activity, MainActivity.class));
+            activity.finish();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveIfHighScore() {
+        if(prefs.getInt("highscore",0)< score){
+            SharedPreferences.Editor editor =prefs.edit();
+            editor.putInt("highscore",score);
+            editor.apply();
+        }
     }
 
     public void sleep (){
@@ -228,16 +306,18 @@ public class GameView extends SurfaceView implements Runnable{
                 }
                 break;
             case MotionEvent.ACTION_UP://if the user tap on the right side of the screen the plane will shoot
-                    flight.isGoingUp = false;
-                    if( event.getX() > screenX/2){
-                        flight.toShoot ++;
-                    }
+                flight.isGoingUp = false;
+                if( event.getX() > screenX/2){
+                    flight.toShoot ++;
+                }
                 break;
         }
         return true;
     }
 
     public void newBullet() {
+        if(!prefs.getBoolean("isMute",false))
+            soundPool.play(sound, 1, 1, 0, 0, 1);
         Bullet bullet = new Bullet(getResources());
         // placing the bullet near the wings of the plane
         bullet.x = flight.x + flight.width;

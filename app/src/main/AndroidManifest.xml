@@ -9,10 +9,10 @@
         android:roundIcon="@drawable/fly1"
         android:supportsRtl="true"
         android:theme="@style/Theme.Chgame">
-        <activity android:name=".GameAcitivity"
+        <activity
+            android:name=".GameAcitivity"
             android:screenOrientation="landscape"
-            android:theme="@style/AppTheme.noActionBar"/>
-
+            android:theme="@style/AppTheme.noActionBar" />
         <activity
             android:name=".MainActivity"
             android:screenOrientation="landscape"

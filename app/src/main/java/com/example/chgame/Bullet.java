@@ -5,9 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
 
-import static com.example.chgame.GameView.screenRatioX;
-import static com.example.chgame.GameView.screenRatioY;
-
 public class Bullet {
     int x, y, width, height;
     Bitmap bullet;
@@ -33,5 +30,4 @@ public class Bullet {
     Rect getCollisionShape () {
         return new Rect(x, y, x + width, y + height);
     }
-
 }
